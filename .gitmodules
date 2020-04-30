@@ -1,0 +1,3 @@
+[submodule "lib/dgdl-parser"]
+	path = lib/dgdl-parser
+	url = https://github.com/marksnaith/dgdl-parser.git
