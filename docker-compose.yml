@@ -6,3 +6,5 @@ services:
     container_name: dgep
     ports:
       - "8888:8888"
+    volumes:
+    - ./src:/app

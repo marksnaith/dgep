@@ -13,13 +13,14 @@ app = Flask(__name__)
 @app.route("/<method>/<a>/<b>", methods=['GET','POST'])
 def route_no_params(method, *args, **kwargs):
     if request.method == "POST":
-        data = request.get_json()
+        data = request.get_json(force=True)
     else:
         data = {}
-    return dgep.handle(method, data, *args, **kwargs)
+    return Response(dgep.handle(method, data, *args, **kwargs), mimetype='application/json')
 
 @dgep.interface
 class RestInterface:
     def run(self):
+        print("Running RESTful interface")
         http_server = pywsgi.WSGIServer(('', 8888), app)
         http_server.serve_forever()

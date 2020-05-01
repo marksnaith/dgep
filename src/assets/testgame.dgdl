@@ -1,0 +1,24 @@
+game(id:TestGame){
+
+    roles(Role, Role2)
+    participants(min:2, max:undefined)
+    player(id:Test, min:2, max:2)
+    player(id:Test2, roles(TestRole))
+
+    store(id:TestStore, owner:Test, structure:set, visibility:public, {c})
+
+    backtracking(on)
+
+    rule(id:TestRule, scope:initial){
+        if(inrole(Test2, TestRole)){
+          assign(Test2, speaker);
+          move(add, next, TestMove, $User, {p}, Test2);
+        }
+    }
+
+    interaction(id:TestMove, addressee:TestUser, content:{p}, opener:"Test"){
+      if(inrole(Player, Test)){
+        move(add, next, Test2, $Test, TestPlayer);
+      }
+    }
+}

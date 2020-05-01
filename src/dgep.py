@@ -1,4 +1,6 @@
 from threading import Thread
+import sys
+import json
 
 interfaces = []
 endpoints = {}
@@ -17,7 +19,12 @@ def endpoint(command, parameters=None):
         parameters = []
     def decorator(fn):
         def wrapper(*args, **kwargs):
-            return fn(dialogue_manager, *args, **kwargs)
+            #try:
+            result = fn(dialogue_manager, *args, **kwargs)
+            #except KeyError as e:
+            #    print(e, flush=True)
+            #    result = {"error": "Required parameter " + str(e) + " not found"}
+            return result
         endpoints[command] = {"method": wrapper, "parameters": parameters}
         return wrapper
     return decorator
