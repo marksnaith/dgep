@@ -1,12 +1,15 @@
 ''' Module for handling conditionals
 
-    Allows for easy development of new conditional *requirements if/when new
+    Allows for easy development of new conditional requirements if/when new
     requirements are added to the DGDL spec
 
     All new requirement handlers have the same basic signature:
 
     @requirement_handler(<requirement>)
     def handle_<requirement>_effect(dialogue, requirement)
+
+    This means all requirement handlers have access to the dialogue object to
+    test dialogue properties (e.g. current speaker)
 '''
 
 requirement_handlers = {}
@@ -21,8 +24,8 @@ def handle_conditional(dialogue, conditional, data=None):
     ''' Handler for conditionals
 
         If all requirements = True, conditional effects are returned
-        If all requirements = False, then either elseif if evaluated, or
-            "else" effects (if any) are returned
+        If all requirements = False, then either elseif is evaluated (as a
+        conditional), or "else" effects (if any) are returned
     '''
     outcome = True
 
@@ -53,7 +56,6 @@ def handle_role_requirement(dialogue, requirement):
     outcome = False
 
     for name,player in dialogue.players.items():
-        print("Testing if " + str(playerID) + " is in role " + str(role), flush=True)
         if player.player == playerID and player.in_role(role):
             outcome = True
             break
