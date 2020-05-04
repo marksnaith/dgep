@@ -1,0 +1,12 @@
+[Unit]
+Description=uWSGI instance to serve dgep
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory /app/src
+ExecStart=/usr/local/bin/uwsgi --ini dgep.ini
+
+[Install]
+WantedBy=multi-user.target
