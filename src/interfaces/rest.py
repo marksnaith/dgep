@@ -8,9 +8,9 @@ import dgep
 
 app = Flask(__name__)
 
-@app.route("/<method>", methods=['GET','POST'])
-@app.route("/<method>/<a>", methods=['GET','POST'])
-@app.route("/<method>/<a>/<b>", methods=['GET','POST'])
+@app.route("/dgep/<method>", methods=['GET','POST'])
+@app.route("/dgep/<method>/<a>", methods=['GET','POST'])
+@app.route("/dgep/<method>/<a>/<b>", methods=['GET','POST'])
 def route_no_params(method, *args, **kwargs):
     if request.method == "POST":
         data = request.get_json(force=True)
