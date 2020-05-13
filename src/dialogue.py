@@ -4,6 +4,11 @@ from components import *
 import json
 from handlers import *
 
+import sys
+
+from argtech import ws
+
+@ws.endpoint
 class Dialogue:
 
     def __init__(self):
@@ -20,26 +25,78 @@ class Dialogue:
         self.available_moves = {}
         self.current_speaker = None
 
-    def new_dialogue(self, protocol, data):
-        ''' Creates a new dialogue using the given protocol and data'''
-        
+    @ws.method("/new/<protocol>",methods=["POST"])
+    def new_dialogue(self, protocol):
+        """
+        post:
+            summary: Create a new dialogue
+            responses:
+                '200':
+                    description: OK
+                    schema:
+                        type: object
+                        properties:
+                            foo:
+                                type: string
+                                example: bar
+            parameters:
+                - name: protocol
+                  in: path
+                  required: true
+                  description: The name of the protocol
+
+                - name: body
+                  in: body
+                  required: true
+                  schema:
+                      type: object
+                      properties:
+                          participants:
+                              type: array
+                              items:
+                                  type: object
+                                  properties:
+                                      name:
+                                          type: string
+                                      player:
+                                          type: string
+
+
+        get:
+            summary: Check a dialogue
+            responses:
+                '200':
+                    description: OK
+        """
+
+        data = ws.request.get_json(force=True)
+
+        if data is None:
+            data = {}
+
+        print(data, file=sys.stderr)
+
         self.protocol = protocol
         self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=protocol))
         self.backtracking = self.game.backtracking
 
-        for participant in data["participants"]:
-            name = participant["name"]
-            player = participant["player"]
-            roles = [r for p in self.game.players for r in p.roles if p.playerID==player]
+        if "participants" in data:
+            for participant in data["participants"]:
+                name = participant["name"]
+                player = participant["player"]
+                roles = [r for p in self.game.players for r in p.roles if p.playerID==player]
 
-            self.players[name] = Player(name, player, roles)
-            self.available_moves[name] = {"next":[], "future":[]}
+                self.players[name] = Player(name, player, roles)
+                self.available_moves[name] = {"next":[], "future":[]}
 
         for store in self.game.stores:
             id = store.storeID
             self.stores[id] = Store(id, store.owner, store.structure, store.visibility, store.content)
 
         self.start()
+
+        print("returning json", file=sys.stderr)
+        print(str(self.json()), file=sys.stderr)
 
         return self.json()
 
@@ -137,4 +194,4 @@ class Dialogue:
             "available_moves": self.available_moves
         }
 
-        return json.dumps(to_return)
+        return to_return #json.dumps(to_return)
