@@ -8,3 +8,11 @@ services:
       - "8888:8888"
     volumes:
     - ./src:/app
+
+  mongo:
+    image: mongo
+    container_name: dgep_mongo
+    volumes:
+    - ./mongo/data/db:/data/db
+    ports:
+    - "27017:27017"

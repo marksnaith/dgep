@@ -3,18 +3,20 @@ import ast
 from components import *
 import json
 from handlers import *
-
+import uuid
 import sys
+import pymongo
 
-from argtech import ws
-
-@ws.endpoint
 class Dialogue:
 
     def __init__(self):
         #DGDL
         self.parser = dgdl.DGDLParser()
         self.game = None
+
+        #meta-level stuff
+        self.owner = None
+        self.mongo = pymongo.MongoClient("mongodb://dgep_mongo:27017/")
 
         #Dialogue properties
         self.dialogueID = None
@@ -25,56 +27,16 @@ class Dialogue:
         self.available_moves = {}
         self.current_speaker = None
 
-    @ws.method("/new/<protocol>",methods=["POST"])
-    def new_dialogue(self, protocol):
-        """
-        post:
-            summary: Create a new dialogue
-            responses:
-                '200':
-                    description: OK
-                    schema:
-                        type: object
-                        properties:
-                            foo:
-                                type: string
-                                example: bar
-            parameters:
-                - name: protocol
-                  in: path
-                  required: true
-                  description: The name of the protocol
+    def new_dialogue(self, protocol, data, owner):
 
-                - name: body
-                  in: body
-                  required: true
-                  schema:
-                      type: object
-                      properties:
-                          participants:
-                              type: array
-                              items:
-                                  type: object
-                                  properties:
-                                      name:
-                                          type: string
-                                      player:
-                                          type: string
-
-
-        get:
-            summary: Check a dialogue
-            responses:
-                '200':
-                    description: OK
-        """
-
-        data = ws.request.get_json(force=True)
+        if owner is None:
+            return None
 
         if data is None:
             data = {}
 
-        print(data, file=sys.stderr)
+        self.owner = owner
+        self.dialogueID = str(uuid.uuid4().hex)
 
         self.protocol = protocol
         self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=protocol))
@@ -94,9 +56,7 @@ class Dialogue:
             self.stores[id] = Store(id, store.owner, store.structure, store.visibility, store.content)
 
         self.start()
-
-        print("returning json", file=sys.stderr)
-        print(str(self.json()), file=sys.stderr)
+        self.save()
 
         return self.json()
 
@@ -109,8 +69,6 @@ class Dialogue:
                 if rule.conditional is not None:
                     effects = handle_conditional(self, rule.conditional)
                     handle_effects(self, effects)
-
-        self.dialogueID = self.save()
 
     def validate(self):
         ''' Checks that this dialogue satisfies the constraints of the
@@ -161,13 +119,52 @@ class Dialogue:
 
     def save(self):
 
+        store = {
+            "owner": self.owner,
+            "dialogue": self.json()
+        }
+
+        db = self.mongo["dgep"]
+        dialogues = db["dialogues"]
+
+        dialogues.insert_one(store)
+
         return
 
     def load(self, dialogueID):
-        mock_json = '{"protocol":"testgame","backtracking": true, "available_moves": {"Bob": {"next": [{"reply": {"p": "$p"}, "moveID": "TestMove", "opener": ""}], "future": []}}, "current_speaker": "Bob", "players": {"Bob": {"roles": ["TestRole", "speaker"], "name": "Bob", "player": "Test2"}}, "stores": {"TestStore": {"visibility": "public", "content": ["c"], "id": "TestStore", "owner": ["Test"], "structure": "set"}}}'
+
+        db = self.mongo["dgep"]
+        dialogues = db["dialogues"]
+
+        result = dialogues.find_one({"dialogue.dialogueID": dialogueID})
+
+        if result is not None:
+            self.owner = result["owner"]
+            dialogue = result["dialogue"]
+
+            self.dialogueID = dialogue["dialogueID"]
+            self.protocol = dialogue["protocol"]
+            self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=self.protocol))
+            self.available_moves = dialogue["available_moves"]
+            self.current_speaker = dialogue["current_speaker"]
+            self.backtracking = dialogue["backtracking"]
+
+            for name, player in dialogue["players"].items():
+                self.players[name] = Player(player["name"], player["player"], player["roles"])
+
+            for name, store in dialogue["stores"].items():
+                self.stores[name] = Store(store["id"], store["owner"], store["structure"],store["visibility"], store["content"])
+
+            return self
+        else:
+            return None
+
+
+        mock_json = '{"dialogueID":"abc","protocol":"testgame","backtracking": true, "available_moves": {"Bob": {"next": [{"reply": {"p": "$p"}, "moveID": "TestMove", "opener": ""}], "future": []}}, "current_speaker": "Bob", "players": {"Bob": {"roles": ["TestRole", "speaker"], "name": "Bob", "player": "Test2"}}, "stores": {"TestStore": {"visibility": "public", "content": ["c"], "id": "TestStore", "owner": ["Test"], "structure": "set"}}}'
 
         d = json.loads(mock_json)
 
+        self.dialogueID = d["dialogueID"]
         self.protocol = d["protocol"]
         self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=self.protocol))
         self.available_moves = d["available_moves"]
@@ -186,6 +183,7 @@ class Dialogue:
         ''' Get a JSON representation of this dialogue '''
 
         to_return = {
+            "dialogueID": self.dialogueID,
             "protocol": self.protocol,
             "players": {key: value.__dict__ for key,value in self.players.items()},
             "backtracking": self.backtracking,
