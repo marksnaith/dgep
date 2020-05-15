@@ -105,7 +105,7 @@ class Dialogue:
                     break
 
             if interaction is not None:
-                if interactions.effects:
+                if interaction.effects:
                     handle_effects(self, interaction.effects, data)
 
                 if interaction.conditional is not None:
