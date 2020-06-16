@@ -23,9 +23,11 @@ class Dialogue:
         self.protocol = None
         self.players = {}
         self.stores = {}
+        self.turntaking = "strict"
         self.backtracking = False
         self.available_moves = {}
         self.current_speaker = None
+        self.current_speakers = []
 
     def new_dialogue(self, protocol, data, owner):
 
@@ -40,6 +42,7 @@ class Dialogue:
 
         self.protocol = protocol
         self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=protocol))
+        self.turntaking = self.game.turntaking
         self.backtracking = self.game.backtracking
 
         if "participants" in data:
@@ -57,6 +60,8 @@ class Dialogue:
 
         self.start()
         self.save()
+
+        print(self.players)
 
         return self.json()
 
@@ -80,6 +85,31 @@ class Dialogue:
         '''
 
         return
+
+    def get_available_moves(self):
+        '''
+        Returns the available moves based on 1) the current speaker(s) and 2)
+            whether or not backtracking is allowed
+        '''
+        response = {}
+        if self.turntaking == "strict":
+            if self.current_speaker in self.available_moves:
+                moves = self.available_moves[self.current_speaker]
+
+                if moves["next"]:
+                    response[self.current_speaker] = moves["next"]
+                elif self.backtracking:
+                    response[self.current_speaker] = moves["future"]
+                else:
+                    response[self.current_speaker] = []
+        else:
+            for player, moves in self.available_moves.items():
+                if moves["next"]:
+                    response[player] = moves["next"]
+                elif self.backtracking and moves["future"]:
+                    response[player] = moves["future"]
+
+        return response
 
     def perform_interaction(self, data):
 
@@ -110,6 +140,7 @@ class Dialogue:
 
                 if interaction.conditional is not None:
                     effects = handle_conditional(self, interaction.conditional, data)
+                    handle_effects(self, effects, data)
 
                 return ast.literal_eval(str(interaction))
             else:
@@ -186,6 +217,7 @@ class Dialogue:
             "dialogueID": self.dialogueID,
             "protocol": self.protocol,
             "players": {key: value.__dict__ for key,value in self.players.items()},
+            "turntaking": self.turntaking,
             "backtracking": self.backtracking,
             "stores": {key: value.__dict__ for key, value in self.stores.items()},
             "current_speaker": self.current_speaker,

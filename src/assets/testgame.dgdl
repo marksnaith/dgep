@@ -7,12 +7,13 @@ game(id:TestGame){
 
     store(id:TestStore, owner:Test, structure:set, visibility:public, {c})
 
+    turntaking(strict)
     backtracking(on)
 
     rule(id:TestRule, scope:initial){
         if(inrole(Test2, TestRole)){
           assign(Test2, speaker);
-          move(add, next, TestMove, $User, {p}, Test2);
+          move(add, next, TestMove, $Test, {p}, Test2);
         }
     }
 

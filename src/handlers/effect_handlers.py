@@ -81,7 +81,7 @@ def handle_move_effect(dialogue, effect, data=None):
         addressee = effect.addressee[1:] # removes the '$'
 
         for name, player in dialogue.players.items():
-            if name == addressee or addressee in player.roles:
+            if player.player == addressee or addressee in player.roles:
                 addressees.append(name)
 
     moves = []
@@ -96,3 +96,39 @@ def handle_move_effect(dialogue, effect, data=None):
         for name,player in dialogue.players.items():
             if player.player == user or user in player.roles:
                 dialogue.available_moves[name][time].extend(moves)
+
+@effect_handler("storeop")
+def handle_store_effect(dialogue, effect, data=None):
+    if effect.type != "storeop":
+        return
+
+    storeID = self.storeID
+    action = effect.storeaction
+
+    if storeID in dialogue.stores:
+        owner = dialogue.stores[storeID].owner
+
+        # check the speaker is an owner of the store
+        if (isinstance(owner, list) and not owner.contains(data["speaker"])
+                or owner is not None and data["speaker"] != dialogue.stores[storeID].owner):
+            return
+
+        if action == "empty":
+            dialogue.stores[storeID].content = []
+            return
+
+        for c in effect.content:
+            if c[0] == "$":
+                var = c[1]
+
+                for key, value in data["reply"].items():
+                    if key == var:
+                        if action == "add":
+                            dialogue.stores[storeID].content.append(value)
+                        elif action == "remove" and value in dialogue.stores[storeID].content:
+                            dialogue.stores[storeID].content.remove(value)
+            else:
+                if action == "add":
+                    dialogue.stores[storeID].content.append(c)
+                elif action == "remove" and c in dialogue.stores[storeID].content:
+                    dialogue.stores[storeID].content.remove(c)
