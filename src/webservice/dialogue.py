@@ -2,7 +2,7 @@ from argtech import ws
 from dialogue import Dialogue as DGEPDialogue
 import uuid
 
-@ws.endpoint
+@ws.group
 class Dialogue:
 
     """Create and manage dialogues"""
@@ -46,12 +46,17 @@ class Dialogue:
                                           type: string
         """
 
-        data = ws.request.get_json(force=True)
+        login = ws.authorise()
 
-        d = DGEPDialogue()
-        response = d.new_dialogue(protocol, data, "mark")
+        if login is not None:
+            data = ws.request.get_json(force=True)
 
-        return response
+            d = DGEPDialogue()
+            response = d.new_dialogue(protocol, data, login["username"])
+
+            return response
+        else:
+            return ws._401()
 
     @ws.method("/<dialogueID>/moves",methods=["GET"])
     def moves(self, dialogueID):
@@ -105,7 +110,7 @@ class Dialogue:
 
             if d is not None:
                 if d.owner == login["username"]:
-                    return d.json(), 200
+                    return d.get_available_moves(), 200
                 else:
                     return ws._401()
             else:

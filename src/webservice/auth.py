@@ -3,7 +3,7 @@ import random
 import hashlib
 import pymongo
 
-@ws.endpoint
+@ws.group
 class Auth:
 
     """Handles authentication for DGEP"""

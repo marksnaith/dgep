@@ -1,6 +1,6 @@
 from argtech import ws
 
-@ws.endpoint
+@ws.group
 class Protocol:
 
     """Create and manage protocols"""
