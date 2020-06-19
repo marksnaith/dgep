@@ -10,5 +10,11 @@ class Store(Component):
         self.content = content
 
 
-    def contains(self, content):
-        return content in self.content
+    def contains(self, content, negated=False):
+
+        result = content in self.content
+
+        if negated:
+            result = not result
+
+        return result

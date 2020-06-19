@@ -5,7 +5,7 @@ game(id:TestGame){
     player(id:Test, min:2, max:2)
     player(id:Test2, roles(TestRole))
 
-    store(id:TestStore, owner:Test, structure:set, visibility:public, {c})
+    store(id:TestStore, owner:Test, structure:set, visibility:public)
 
     turntaking(strict)
     backtracking(on)
@@ -14,12 +14,14 @@ game(id:TestGame){
         if(inrole(Test2, TestRole)){
           assign(Test2, speaker);
           move(add, next, TestMove, $Test, {p}, Test2);
+          store(add, {"test"}, TestStore);
         }
     }
 
-    interaction(id:TestMove, addressee:TestUser, content:{p}, opener:"Test"){
-      if(inrole(Player, Test)){
-        move(add, next, Test2, $Test, TestPlayer);
+    interaction(id:TestMove, addressee:TestUser, content:{p}, opener:"Test, $p"){
+      if(!inspect(in, {"xyz"}, TestStore)){
+        assign(Target, speaker);
+        move(add, next, TestMove, $Test2, {p}, Target);
       }
     }
 }

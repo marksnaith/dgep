@@ -64,6 +64,9 @@ def handle_move_effect(dialogue, effect, data=None):
 
     user = effect.user
 
+    if user == "Target":
+        user = dialogue.players[data["target"]].player
+
     if data is None:
         data = {"reply":{}}
 
@@ -86,11 +89,24 @@ def handle_move_effect(dialogue, effect, data=None):
 
     moves = []
 
+    opener = None;
+
+    for i in dialogue.game.interactions:
+        if i.id == moveID:
+            opener = i.opener
+
+            for var in content.keys():
+                if "$" + var in opener:
+                    opener = opener.replace("$" + var, content[var])
+
+    if opener is None:
+        opener = ""
+
     if addressees:
         for a in addressees:
-            moves.append({"reply": content, "opener": "", "moveID": moveID, "target": a})
+            moves.append({"reply": content, "opener": opener, "moveID": moveID, "target": a})
     else:
-        moves.append({"reply": content, "opener": "", "moveID": moveID})
+        moves.append({"reply": content, "opener": opener, "moveID": moveID})
 
     if effect.action == "add":
         for name,player in dialogue.players.items():
@@ -102,22 +118,23 @@ def handle_store_effect(dialogue, effect, data=None):
     if effect.type != "storeop":
         return
 
-    storeID = self.storeID
+    storeID = effect.storeID
     action = effect.storeaction
 
     if storeID in dialogue.stores:
         owner = dialogue.stores[storeID].owner
 
-        # check the speaker is an owner of the store
-        if (isinstance(owner, list) and not owner.contains(data["speaker"])
-                or owner is not None and data["speaker"] != dialogue.stores[storeID].owner):
-            return
+        # check the speaker is an owner of the store - assuming we have data
+        if data is not None:
+            if (isinstance(owner, list) and not data["speaker"] in owner
+                    or owner is not None and data["speaker"] != dialogue.stores[storeID].owner):
+                return
 
         if action == "empty":
             dialogue.stores[storeID].content = []
             return
 
-        for c in effect.content:
+        for c in effect.storecontent:
             if c[0] == "$":
                 var = c[1]
 
@@ -128,7 +145,15 @@ def handle_store_effect(dialogue, effect, data=None):
                         elif action == "remove" and value in dialogue.stores[storeID].content:
                             dialogue.stores[storeID].content.remove(value)
             else:
+                c = c.replace('"','') #strip off quotes
                 if action == "add":
                     dialogue.stores[storeID].content.append(c)
                 elif action == "remove" and c in dialogue.stores[storeID].content:
                     dialogue.stores[storeID].content.remove(c)
+
+@effect_handler("statusupdate")
+def handle_status_update(dialogue, effect, data=None):
+    if effect.type != "statusupdate":
+        return
+
+    #dialogue.set_status(effect.status)

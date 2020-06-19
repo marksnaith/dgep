@@ -157,4 +157,19 @@ class Dialogue:
                                     type: string
         """
 
+        login = ws.authorise()
+
+        if login is not None:
+            d = DGEPDialogue().load(dialogueID)
+
+            if d is not None:
+                if d.owner == login["username"]:
+                    data = ws.request.get_json(force=True)
+                    return d.perform_interaction(interactionID, data)
+                    #return data
+                else:
+                    return ws._401()
+        else:
+            return ws._401()
+
         return "DialogueID: {}; interactionID: {}".format(dialogueID,interactionID)

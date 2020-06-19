@@ -111,7 +111,7 @@ class Dialogue:
 
         return response
 
-    def perform_interaction(self, data):
+    def perform_interaction(self, interactionID, data):
 
         ''' data = {
             "moveID": <moveID>,
@@ -125,28 +125,32 @@ class Dialogue:
             }
         }'''
 
-        if "moveID" in data:
-            interactionID = data["moveID"]
-            interaction = None
+        #if "moveID" in data:
+        #interactionID = data["moveID"]
+        interaction = None
 
-            for i in self.game.interactions:
-                if i.id == interactionID:
-                    interaction = i
-                    break
+        for i in self.game.interactions:
+            if i.id == interactionID:
+                interaction = i
+                break
 
-            if interaction is not None:
-                if interaction.effects:
-                    handle_effects(self, interaction.effects, data)
+        # empty everyone's "next" moves
+        for k in list(self.available_moves.keys()):
+            self.available_moves[k]["next"] = []
 
-                if interaction.conditional is not None:
-                    effects = handle_conditional(self, interaction.conditional, data)
-                    handle_effects(self, effects, data)
+        if interaction is not None:
+            if interaction.effects:
+                handle_effects(self, interaction.effects, data)
 
-                return ast.literal_eval(str(interaction))
-            else:
-                return "Interaction not found"
+            if interaction.conditional is not None:
+                effects = handle_conditional(self, interaction.conditional, data)
+                handle_effects(self, effects, data)
 
-        return "MoveID not found"
+            return self.get_available_moves()
+        else:
+            return "Interaction not found"
+
+        #return "MoveID not found"
 
     def save(self):
 

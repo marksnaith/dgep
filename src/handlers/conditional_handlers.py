@@ -31,7 +31,7 @@ def handle_conditional(dialogue, conditional, data=None):
 
     for requirement in conditional.requirements:
         if requirement.type in requirement_handlers:
-            outcome = requirement_handlers[requirement.type](dialogue, requirement)
+            outcome = requirement_handlers[requirement.type](dialogue, requirement, data)
             if not outcome:
                 break # no point in testing more if even one is false
 
@@ -45,13 +45,16 @@ def handle_conditional(dialogue, conditional, data=None):
 # Requirement handlers below #
 
 @requirement_handler("event")
-def handle_event_requirement(dialogue, requirement):
+def handle_event_requirement(dialogue, requirement, data):
     return True
 
 @requirement_handler("inrole")
-def handle_role_requirement(dialogue, requirement):
+def handle_role_requirement(dialogue, requirement, data):
     playerID = requirement.playerID
     role = requirement.role
+
+    if playerID == "speaker":
+        playerID = dialogue.current_speaker
 
     outcome = False
 
@@ -66,5 +69,30 @@ def handle_role_requirement(dialogue, requirement):
         return outcome
 
 @requirement_handler("inspect")
-def handle_inspect_requirement(dialogue, requirement):
-    return True
+def handle_inspect_requirement(dialogue, requirement, data):
+    storeID = requirement.storeID
+    content = requirement.content
+    position = requirement.storepos
+
+    negated = requirement.negated
+
+    store = dialogue.stores[storeID]
+
+    result = True
+
+    for c in content:
+        if c[0] == '"':
+            c = c.replace('"','') #strip quotes
+            if not store.contains(c, negated):
+                result = False
+                break
+        elif data is not None and "reply" in data:
+            if c in data["reply"]:
+                if not store.contains(data["reply"][c], negated):
+                    result = False
+                    break
+        else:
+            result = False
+            break
+
+    return result
