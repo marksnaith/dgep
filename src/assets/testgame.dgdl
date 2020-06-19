@@ -19,9 +19,10 @@ game(id:TestGame){
     }
 
     interaction(id:TestMove, addressee:TestUser, content:{p}, opener:"Test, $p"){
+      save({p}, $TestVar$);
       if(!inspect(in, {"xyz"}, TestStore)){
         assign(Target, speaker);
-        move(add, next, TestMove, $Test2, {p}, Target);
+        move(add, next, TestMove, $Test2, {$TestVar$}, Target);
       }
     }
 }

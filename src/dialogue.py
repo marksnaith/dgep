@@ -28,6 +28,7 @@ class Dialogue:
         self.available_moves = {}
         self.current_speaker = None
         self.current_speakers = []
+        self.runtimevars = {}
 
     def new_dialogue(self, protocol, data, owner):
 
@@ -42,6 +43,10 @@ class Dialogue:
 
         self.protocol = protocol
         self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=protocol))
+
+        if isinstance(self.game, list):
+            return {"errors": self.game}
+
         self.turntaking = self.game.turntaking
         self.backtracking = self.game.backtracking
 

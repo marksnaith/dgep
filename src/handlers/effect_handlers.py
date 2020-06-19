@@ -59,6 +59,9 @@ def handle_move_effect(dialogue, effect, data=None):
     if effect.type != "move":
         return
 
+    print("Move effect content: " + str(effect.content))
+
+
     moveID = effect.moveID
     time = effect.time
 
@@ -71,13 +74,31 @@ def handle_move_effect(dialogue, effect, data=None):
         data = {"reply":{}}
 
     # build the content, if any, based on the incoming interaction data
-    content = {}
+    content = []
     if effect.content is not None:
         for c in effect.content:
-            if c in data["reply"]:
-                content[c] = data["reply"][c]
+            if c[0] == "$" and c[-1] == "$":
+                c = c[1:-1]
+                if c in dialogue.runtimevars:
+                    c = ",".join(dialogue.runtimevars[c])
+                    content.append(c)
+            elif c in data["reply"]:
+                #content[c] = data["reply"][c]
+                content.append(data["reply"][c])
             else:
-                content[c] = "$" + c
+                #content[c] = "$" + c
+                content.append("$" + c)
+
+
+    for i in dialogue.game.interactions:
+        if i.id == moveID:
+            interaction_content = i.content
+
+            if len(interaction_content) == len(content):
+                content = dict(zip(interaction_content, content))
+            else:
+                content = {}
+            break
 
     addressees = []
     if effect.addressee is not None:
@@ -155,5 +176,28 @@ def handle_store_effect(dialogue, effect, data=None):
 def handle_status_update(dialogue, effect, data=None):
     if effect.type != "statusupdate":
         return
-
     #dialogue.set_status(effect.status)
+
+@effect_handler("save")
+def handle_save_effect(dialogue, effect, data=None):
+    if effect.type != "save":
+        return
+
+    content = effect.content
+    variable = effect.variable
+
+    store_content = []
+
+    for c in content:
+        if c[0] == '"':
+            c = c.replace('"','')
+        else:
+            if data is not None and "reply" in data:
+                if c in data["reply"]:
+                    c = data["reply"][c]
+
+        store_content.append(c)
+
+    dialogue.runtimevars[variable] = store_content
+
+    print(dialogue.runtimevars)
