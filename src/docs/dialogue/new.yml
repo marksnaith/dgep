@@ -1,0 +1,34 @@
+post:
+  summary: Create a new dialogue
+  security:
+      - APIAuthKey: []
+  responses:
+      '200':
+          description: OK
+          schema:
+              type: object
+              properties:
+                  foo:
+                      type: string
+                      example: bar
+  parameters:
+      - name: protocol
+        in: path
+        required: true
+        description: The name of the protocol
+
+      - name: body
+        in: body
+        required: true
+        schema:
+            type: object
+            properties:
+                participants:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            name:
+                                type: string
+                            player:
+                                type: string

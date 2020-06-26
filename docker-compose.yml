@@ -5,7 +5,7 @@ services:
     build: .
     container_name: dgep
     ports:
-      - "8888:8888"
+      - "8888:80"
     volumes:
     - ./src:/app
 

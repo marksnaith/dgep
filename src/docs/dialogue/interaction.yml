@@ -1,0 +1,34 @@
+post:
+    summary: Performs the given interaction
+    security:
+        - APIAuthKey: []
+    responses:
+        '200':
+            description: OK
+    parameters:
+        - name: dialogueID
+          in: path
+          required: true
+          description: The ID of the dialogue in which to perform the interaction
+
+        - name: interactionID
+          in: path
+          required: true
+          description: The ID of the interaction to perform
+
+        - name: body
+          in: body
+          required: true
+          description: The body of the interaction
+          schema:
+            type: object
+            properties:
+                speaker:
+                    type: string
+                target:
+                    type: string
+                reply:
+                    type: object
+                    properties:
+                        p:
+                            type: string

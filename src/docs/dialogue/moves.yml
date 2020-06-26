@@ -1,0 +1,40 @@
+get:
+    summary: Get the currently available moves for the given dialogueID
+    security:
+        - APIAuthKey: []
+    parameters:
+        - name: dialogueID
+          in: path
+          required: true
+          description: The ID of the dialogue
+    responses:
+        '401':
+            description: Not authorised
+        '404':
+            description: Not found
+        '200':
+            description: OK
+            schema:
+                type: object
+                properties:
+                    dialogueID:
+                        type: string
+                    moves:
+                        type: object
+                        properties:
+                            <player>:
+                                type: array
+                                items:
+                                    type: object
+                                    properties:
+                                        reply:
+                                            type: object
+                                            properties:
+                                                p:
+                                                    type: string
+                                                target:
+                                                    type: string
+                                                moveID:
+                                                    type: string
+                                                opener:
+                                                    type: string
