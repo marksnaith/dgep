@@ -46,7 +46,49 @@ def handle_conditional(dialogue, conditional, data=None):
 
 @requirement_handler("event")
 def handle_event_requirement(dialogue, requirement, data):
-    return True
+    result = False
+
+    eventpos = requirement.eventpos
+    moveID = requirement.moveID
+    content = requirement.content
+    user = requirement.user
+
+    if content is not None:
+        tmp = []
+        for c in content:
+            if c[0] == '"':
+                tmp.append(c[1:-1])
+            elif c[0] == "$":
+                tmp.append(",".join(dialogue.runtimevars[c[1:-1]]))
+        content = tmp
+        print("CONTENT: " + str(content))
+
+        move_content = data["reply"].values()
+        if content == move_content:
+            result = True
+
+    if user is not None:
+        result = True
+
+    history = dialogue.dialogue_history
+
+    if len(history) == 0:
+        result = False
+    elif eventpos == "last":
+        last = history[-1]
+        if last["moveID"] == moveID:
+            result = True
+        else:
+            result = False
+    elif eventpos == "past":
+        result = True
+    else:
+        result = False
+
+    if requirement.negated:
+        return not result
+    else:
+        return result
 
 @requirement_handler("inrole")
 def handle_role_requirement(dialogue, requirement, data):

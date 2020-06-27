@@ -1,0 +1,12 @@
+get:
+    summary: Get the status of the dialogue
+    security:
+        - APIAuthKey: []
+    responses:
+        '200':
+            description: OK
+    parameters:
+        - name: dialogueID
+          in: path
+          required: true
+          description: The ID of the dialogue to get the status for

@@ -6,8 +6,12 @@ from handlers import *
 import uuid
 import sys
 import pymongo
+from bson.objectid import ObjectId
 
 class Dialogue:
+    """
+    Class to represent and manage a dialogue based on a DGDL protocol
+    """
 
     def __init__(self):
         #DGDL
@@ -29,8 +33,18 @@ class Dialogue:
         self.current_speaker = None
         self.current_speakers = []
         self.runtimevars = {}
+        self.dialogue_history = []
 
     def new_dialogue(self, protocol, data, owner):
+        """
+        Creates a new dialogue based on the given protocol
+        :param str protocol: the protocol corresponding to a DGDL file
+        :param dict data: the data to instantiate the protocol into a dialogue
+        :owner the username of the owner of this dialogue
+
+        :return dictionary representation of the dialogue
+        :rtype dict
+        """
 
         if owner is None:
             return None
@@ -66,12 +80,12 @@ class Dialogue:
         self.start()
         self.save()
 
-        print(self.players)
-
         return self.json()
 
     def start(self):
-        ''' Starts this dialogue, executing all rules with "initial" scope'''
+        """
+        Starts this dialogue, executing all rules with "initial" scope
+        """
 
         for rule in self.game.rules:
             if rule.scope == "initial":
@@ -92,10 +106,10 @@ class Dialogue:
         return
 
     def get_available_moves(self):
-        '''
+        """
         Returns the available moves based on 1) the current speaker(s) and 2)
             whether or not backtracking is allowed
-        '''
+        """
         response = {}
         if self.turntaking == "strict":
             if self.current_speaker in self.available_moves:
@@ -117,8 +131,18 @@ class Dialogue:
         return response
 
     def perform_interaction(self, interactionID, data):
+        """
+        Performs the given interaction, based on the given data
 
-        ''' data = {
+        :param str interactionID: the interaction ID (move name)
+        :param dict data: the data that instantiates the interaction
+        :return the available moves following the interaction
+        :rtype dict
+        """
+
+        '''data is expected in the following format:
+
+           data = {
             "moveID": <moveID>,
             "target": <User>,
             "dialogueID": <dialogueID>,
@@ -130,8 +154,6 @@ class Dialogue:
             }
         }'''
 
-        #if "moveID" in data:
-        #interactionID = data["moveID"]
         interaction = None
 
         for i in self.game.interactions:
@@ -151,27 +173,39 @@ class Dialogue:
                 effects = handle_conditional(self, interaction.conditional, data)
                 handle_effects(self, effects, data)
 
+            self.dialogue_history.append(data)
+            self.save()
             return self.get_available_moves()
         else:
             return "Interaction not found"
 
-        #return "MoveID not found"
-
     def save(self):
-
-        store = {
-            "owner": self.owner,
-            "dialogue": self.json()
-        }
-
+        """
+        Save the dialogue state to MongodB
+        """
         db = self.mongo["dgep"]
         dialogues = db["dialogues"]
 
-        dialogues.insert_one(store)
+        query = {"dialogueID": self.dialogueID}
 
-        return
+        if dialogues.find(query).count() > 0:
+            d = {"$set" : {"dialogue": self.json()}}
+            dialogues.update_one(query, d)
+        else:
+            store = {
+                "dialogueID": self.dialogueID,
+                "owner": self.owner,
+                "dialogue": self.json()
+            }
+            dialogues.insert_one(store).inserted_id
 
     def load(self, dialogueID):
+        """
+        Load the dialogue with the given ID from mongoDB
+        :param str dialogueID: the dialogueID to load
+        :return the loaded Dialogue
+        :rtype Dialogue
+        """
 
         db = self.mongo["dgep"]
         dialogues = db["dialogues"]
@@ -230,7 +264,8 @@ class Dialogue:
             "backtracking": self.backtracking,
             "stores": {key: value.__dict__ for key, value in self.stores.items()},
             "current_speaker": self.current_speaker,
-            "available_moves": self.available_moves
+            "available_moves": self.available_moves,
+            "dialogue_history": self.dialogue_history
         }
 
         return to_return #json.dumps(to_return)

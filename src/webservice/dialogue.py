@@ -68,3 +68,22 @@ class Dialogue:
             return ws._401()
 
         return "DialogueID: {}; interactionID: {}".format(dialogueID,interactionID)
+
+    @ws.method("/<dialogueID>/status",methods=["GET"])
+    def status(self, dialogueID):
+        """
+        @/app/docs/dialogue/status.yml
+        """
+
+        login = ws.authorise()
+
+        if login is not None:
+            d = DGEPDialogue().load(dialogueID)
+
+            if d is not None:
+                if d.owner == login["username"]:
+                    return d.json(), 200
+                else:
+                    return ws._401()
+        else:
+            return ws._401()
