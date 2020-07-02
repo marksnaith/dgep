@@ -1,0 +1,12 @@
+get:
+    summary: Get the DGDL specification of the given protocol
+    responses:
+        '200':
+            description: OK
+        '404':
+            description: Not found
+    parameters:
+        - name: protocol
+          in: path
+          required: true
+          description: The name of the protocol

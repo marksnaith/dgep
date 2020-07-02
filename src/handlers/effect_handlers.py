@@ -34,6 +34,8 @@ def handle_assign_effect(dialogue, effect, data):
     user = effect.user
     role = effect.role
 
+    print("Assigning " + user + " to " + role)
+
     # resolve the user that is to be assigned
     if user == "Target":
         user = data["target"]

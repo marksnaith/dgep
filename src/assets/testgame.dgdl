@@ -3,7 +3,7 @@ game(id:TestGame){
     roles(Role, Role2)
     participants(min:2, max:undefined)
     player(id:Test, min:2, max:2)
-    player(id:Test2, roles(TestRole))
+    player(id:Test2, roles:{TestRole,TestRole2})
 
     store(id:TestStore, owner:Test, structure:set, visibility:public)
 

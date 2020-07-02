@@ -55,32 +55,36 @@ class Dialogue:
         self.owner = owner
         self.dialogueID = str(uuid.uuid4().hex)
 
-        self.protocol = protocol
-        self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=protocol))
+        self.protocol = protocol.lower()
+        dgdl = self.load_protocol(self.protocol)
 
-        if isinstance(self.game, list):
-            return {"errors": self.game}
+        if dgdl is not None:
+            self.game = self.parser.parse(input=dgdl)
+            if isinstance(self.game, list):
+                return {"errors": self.game}
 
-        self.turntaking = self.game.turntaking
-        self.backtracking = self.game.backtracking
+            self.turntaking = self.game.turntaking
+            self.backtracking = self.game.backtracking
 
-        if "participants" in data:
-            for participant in data["participants"]:
-                name = participant["name"]
-                player = participant["player"]
-                roles = [r for p in self.game.players for r in p.roles if p.playerID==player]
+            if "participants" in data:
+                for participant in data["participants"]:
+                    name = participant["name"]
+                    player = participant["player"]
+                    roles = [r for p in self.game.players for r in p.roles if p.playerID==player]
 
-                self.players[name] = Player(name, player, roles)
-                self.available_moves[name] = {"next":[], "future":[]}
+                    self.players[name] = Player(name, player, roles)
+                    self.available_moves[name] = {"next":[], "future":[]}
 
-        for store in self.game.stores:
-            id = store.storeID
-            self.stores[id] = Store(id, store.owner, store.structure, store.visibility, store.content)
+            for store in self.game.stores:
+                id = store.storeID
+                self.stores[id] = Store(id, store.owner, store.structure, store.visibility, store.content)
 
-        self.start()
-        self.save()
+            self.start()
+            self.save()
 
-        return self.json()
+            return self.json()
+        else:
+            return {"error":"Protocol " + self.protocol + " not found"}
 
     def start(self):
         """
@@ -89,6 +93,8 @@ class Dialogue:
 
         for rule in self.game.rules:
             if rule.scope == "initial":
+                print("Handling initial effects")
+                print(rule.effects)
                 handle_effects(self, rule.effects)
                 if rule.conditional is not None:
                     effects = handle_conditional(self, rule.conditional)
@@ -166,6 +172,8 @@ class Dialogue:
             self.available_moves[k]["next"] = []
 
         if interaction is not None:
+            print("Performing interaction effects")
+            print(interaction.effects)
             if interaction.effects:
                 handle_effects(self, interaction.effects, data)
 
@@ -199,6 +207,24 @@ class Dialogue:
             }
             dialogues.insert_one(store).inserted_id
 
+    def load_protocol(self, protocol):
+        """
+        Load the given protocol dgdl from mongo
+        :param str protocol: the name of the protocol to load
+        :return the dgdl
+        :rtype str
+        """
+        db = self.mongo["dgep"]
+        protocols = db["protocols"]
+
+        result = protocols.find_one({"name":self.protocol})
+
+        if result is not None:
+            return result["dgdl"].decode("utf-8")
+        else:
+            return None
+
+
     def load(self, dialogueID):
         """
         Load the dialogue with the given ID from mongoDB
@@ -218,7 +244,7 @@ class Dialogue:
 
             self.dialogueID = dialogue["dialogueID"]
             self.protocol = dialogue["protocol"]
-            self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=self.protocol))
+            self.game = self.parser.parse(input=self.load_protocol(self.protocol))
             self.available_moves = dialogue["available_moves"]
             self.current_speaker = dialogue["current_speaker"]
             self.backtracking = dialogue["backtracking"]
@@ -240,6 +266,11 @@ class Dialogue:
 
         self.dialogueID = d["dialogueID"]
         self.protocol = d["protocol"]
+
+
+
+
+
         self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=self.protocol))
         self.available_moves = d["available_moves"]
         self.current_speaker = d["current_speaker"]

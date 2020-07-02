@@ -1,4 +1,15 @@
 from argtech import ws
+import pymongo
+from werkzeug.utils import secure_filename
+import re
+import dgdl
+import json
+
+_protocol_player_regex = re.compile(r"player\(([^\(\)]+)\)")
+_protocol_player_spec_regex = re.compile(r"([^:{}, ]+):(?:([^:,{} ]+)|{([^{}]+)})")
+
+
+_protocol_player_roles_regex = re.compile(r"{([^{}]+)}")
 
 @ws.group
 class Protocol:
@@ -8,80 +19,116 @@ class Protocol:
     @ws.method("/<protocol>")
     def get(self, protocol):
         """
-        get:
-            summary: Get the DGDL specification of the given protocol
-            responses:
-                '200':
-                    description: OK
-            parameters:
-                - name: protocol
-                  in: path
-                  required: true
-                  description: The name of the protocol
+        @/app/docs/protocol/get.yml
         """
-        return protocol
+        mongo = pymongo.MongoClient("mongodb://dgep_mongo:27017/")
+        db = mongo["dgep"]
+        protocols = db["protocols"]
 
+        result = protocols.find_one({"name": protocol})
+
+        if result is not None:
+            dgdl = result["dgdl"]
+            return dgdl, 200
+        else:
+            return "Protocol not found", 404
+
+    @ws.method("/list")
+    def list(self):
+        """
+        @/app/docs/protocol/list.yml
+        """
+        mongo = pymongo.MongoClient("mongodb://dgep_mongo:27017/")
+        db = mongo["dgep"]
+        protocols = db["protocols"]
+
+        result = protocols.find()
+
+        to_return = {}
+
+        for protocol in result:
+            p = {"players": self.get_players(str(protocol["dgdl"]))}
+
+            to_return[protocol["name"]] = p
+
+        return to_return, 200
 
     @ws.method("/new",methods=["PUT"])
     def new(self):
         """
-        put:
-            summary: Upload a new DGDL protocol
-            responses:
-                '201':
-                    description: Created
-            consumes:
-                - multipart/form-data
-            parameters:
-                - in: formData
-                  name: dgdl_file
-                  type: file
-                  description: The DGDL file to save
+        @/app/docs/protocol/new.yml
         """
 
         file = ws.request.files['dgdl_file']
 
-        return "Uploaded", 201
+        mongo = pymongo.MongoClient("mongodb://dgep_mongo:27017/")
+        db = mongo["dgep"]
+        protocols = db["protocols"]
+
+        name = secure_filename(file.filename)
+        name = name.split(".")[0]
+
+        content = file.read()
+
+        query = {"name": name}
+
+        if protocols.find_one(query) is not None:
+            protocols.update_one(query, {"$set": {"dgdl": content}})
+        else:
+            protocols.insert_one({"name": name, "dgdl": content})
+
+        return {"message":"saved","protocol":name}, 201
 
 
     @ws.method("/test",methods=["POST"])
     def test_file(self):
         """
-        post:
-            summary: Test the provided DGDL file
-            responses:
-                '200':
-                    description: OK
-            consumes:
-                - multipart/form-data
-            parameters:
-                - in: formData
-                  name: dgdl_file
-                  type: file
-                  description: The DGDL file to test
+        @/app/docs/protocol/test_protocol.yml
         """
         file = ws.request.files['dgdl_file']
 
         if file:
-            return file.read()
+            d = file.read().decode("utf-8")
+            print(d)
+            parser = dgdl.DGDLParser()
+            game = parser.parse(input=d)
+
+            if isinstance(game, list):
+                return {"status":"error","errors": game}, 200
+            else:
+                return {"status":"OK"}, 200
         else:
-            return "No file read"
+            return "No file read", 500
 
 
 
     @ws.method("/test/<protocol>")
     def test(self, protocol):
         """
-        get:
-            summary: Test the given protocol
-            responses:
-                '200':
-                    description: OK
-                parameters:
-                    - name: protocol
-                      in: path
-                      required: true
-                      description: The name of the protocol to test
+        @/app/docs/protocol/test.yml
         """
 
         return protocol
+
+
+
+    def get_players(self, dgdl):
+        matches = re.findall(_protocol_player_regex, dgdl)
+        players = []
+
+        for m in matches:
+            if m.strip() != "":
+                player = {}
+                print(m)
+                for p in re.findall(_protocol_player_spec_regex, m.strip()):
+                    p = [x for x in p if x.strip() is not ""]
+                    if p[0] == "roles":
+                        player[p[0]] = [r.strip() for r in p[1].split(",")]
+                    else:
+                        player[p[0]] = p[1]
+
+
+
+                players.append(player)
+
+        return players
