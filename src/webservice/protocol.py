@@ -20,10 +20,9 @@ class Protocol:
         """
         @/app/docs/protocol/get.yml
         """
-        result = self.get_protocol(protocol)
+        dgdl = self.get_protocol(protocol)
 
-        if result is not None:
-            dgdl = result["dgdl"]
+        if dgdl is not None:
             return dgdl, 200
         else:
             return "Protocol not found", 404
