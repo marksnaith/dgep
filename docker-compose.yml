@@ -6,13 +6,14 @@ services:
     container_name: dgep
     ports:
       - "8888:80"
-    volumes:
-    - ./src:/app
 
   mongo:
     image: mongo
     container_name: dgep_mongo
     volumes:
-    - ./mongo/data/db:/data/db
-    ports:
-    - "27017:27017"
+    - dgep-mongo-volume:/data/db
+
+volumes:
+  dgep-mongo-volume:
+   external: false
+   driver: local
