@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 import re
 import dgdl
 import json
+import ast
 
 _protocol_player_regex = re.compile(r"player\(([^\(\)]+)\)")
 _protocol_player_spec_regex = re.compile(r"([^:{}, ]+):(?:([^:,{} ]+)|{([^{}]+)})")
@@ -109,7 +110,7 @@ class Protocol:
         if isinstance(game, list):
             return {"status":"error","errors":game}
         else:
-            return {"status":"OK"}
+            return {"status":"OK", "game":ast.literal_eval(game.__repr__())}
 
     def get_protocol(self, protocol):
         """
