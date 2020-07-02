@@ -267,10 +267,6 @@ class Dialogue:
         self.dialogueID = d["dialogueID"]
         self.protocol = d["protocol"]
 
-
-
-
-
         self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=self.protocol))
         self.available_moves = d["available_moves"]
         self.current_speaker = d["current_speaker"]
