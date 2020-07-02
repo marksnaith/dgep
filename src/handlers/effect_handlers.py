@@ -78,20 +78,27 @@ def handle_move_effect(dialogue, effect, data=None):
     # build the content, if any, based on the incoming interaction data
     content = []
     if effect.content is not None:
+        position = 0;
         for c in effect.content:
+            # if the content is a runtime var, get the value
             if c[0] == "$" and c[-1] == "$":
                 c = c[1:-1]
                 if c in dialogue.runtimevars:
                     c = ",".join(dialogue.runtimevars[c])
                     content.append(c)
             elif c in data["reply"]:
-                #content[c] = data["reply"][c]
+                # else, if it's a variable and the variable is in the reply, get the value from there
                 content.append(data["reply"][c])
             else:
-                #content[c] = "$" + c
-                content.append("$" + c)
+                # otherwise the content is $<var>, where <var> is obtained from the interaction
+                for i in dialogue.game.interactions:
+                    if i.id == moveID:
+                        if len(effect.content) == len(i.content):
+                            content.append("$" + i.content[position])
+            position = position + 1
 
 
+    # now map the content from above to the vars in the interaction
     for i in dialogue.game.interactions:
         if i.id == moveID:
             interaction_content = i.content
