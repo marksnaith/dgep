@@ -168,6 +168,9 @@ class Dialogue:
 
         interaction = None
 
+        if "moveID" not in data:
+            data["moveID"] = interactionID
+
         for i in self.game.interactions:
             if i.id == interactionID:
                 interaction = i
