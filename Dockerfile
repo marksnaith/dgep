@@ -1,15 +1,19 @@
-FROM arg-tech/ws:python-0.1
+FROM python:3.7-stretch
+MAINTAINER mark@arg.tech
 
-MAINTAINER m.snaith@dundee.ac.uk
+# Get the necessary binaries
+RUN apt-get update && \
+    apt-get install -y python3-pip python-dev git-all &&\
+    apt-get clean
 
-ADD ./src /app
-ADD ./lib /lib
-ADD requirements.txt /app/requirements.txt
+# Update pip
+RUN pip3 install --upgrade pip
 
-RUN pip3 install -r /app/requirements.txt
+# Add the DGEP library
+ADD src /lib/dgep
 
-WORKDIR /app
+# Install DGEP
+WORKDIR /lib/dgep
+RUN pip3 install .
 
-ENV APP_NAME dgep
-ENV VERSION 1.0.1
-ENV HOST localhost:8888
+RUN pip3 freeze

@@ -1,6 +1,0 @@
-get:
-  summary:
-      Get a list of all available protocols
-  responses:
-      '200':
-          description: OK

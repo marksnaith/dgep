@@ -1,5 +1,9 @@
 game(id:TestGame){
 
+    /*
+    Description: a test game
+    */
+
     roles(Role, Role2)
     participants(min:2, max:undefined)
     player(id:Test, min:2, max:2)
@@ -20,6 +24,7 @@ game(id:TestGame){
 
     interaction(id:TestMove, addressee:TestUser, content:{p}, opener:"Test, $p"){
       save({p}, $TestVar$);
+      status(inactive, TestGame);
       if(!inspect(in, {"xyz"}, TestStore) && !event(last, TestMove, {$TestVar$})){
         assign(Target, speaker);
         move(add, next, TestMove, $Test2, {$TestVar$}, Target);
