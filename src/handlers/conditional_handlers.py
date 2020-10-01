@@ -1,3 +1,5 @@
+import external
+
 ''' Module for handling conditionals
 
     Allows for easy development of new conditional requirements if/when new
@@ -136,5 +138,24 @@ def handle_inspect_requirement(dialogue, requirement, data):
         else:
             result = False
             break
+
+    return result
+
+@requirement_handler("uriTest")
+def handle_uri_test_requirement(dialogue, requirement, data):
+    id = requirement.id
+
+    if data is None:
+        data = {}
+
+    data = {"interactionData": data, "dialogueData": dialogue.json()}
+
+    print("Sending data: {}".format(str(data)))
+
+    if id in dialogue.extURI:
+        response = external.call_uri(dialogue.extURI[id], data)
+        result = response.get("response", False)
+    else:
+        result = False
 
     return result

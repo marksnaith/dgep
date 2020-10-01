@@ -34,6 +34,8 @@ class Dialogue:
         self.current_speakers = []
         self.runtimevars = {}
         self.dialogue_history = []
+        self.extURI = {}
+        self.content_source = None
 
     def new_dialogue(self, protocol, data, owner):
         """
@@ -66,6 +68,8 @@ class Dialogue:
             self.turntaking = self.game.turntaking
             self.backtracking = self.game.backtracking
 
+            self.extURI = self.game.extURI
+
             if "participants" in data:
                 for participant in data["participants"]:
                     name = participant["name"]
@@ -78,6 +82,8 @@ class Dialogue:
             for store in self.game.stores:
                 id = store.storeID
                 self.stores[id] = Store(id, store.owner, store.structure, store.visibility, store.content)
+
+            self.content_source = data.get("contentSource", None)
 
             self.start()
             self.save()
@@ -248,6 +254,7 @@ class Dialogue:
             self.available_moves = dialogue["available_moves"]
             self.current_speaker = dialogue["current_speaker"]
             self.backtracking = dialogue["backtracking"]
+            self.extURI = dialogue["extURI"]
 
             for name, player in dialogue["players"].items():
                 self.players[name] = Player(player["name"], player["player"], player["roles"])
@@ -292,7 +299,8 @@ class Dialogue:
             "stores": {key: value.__dict__ for key, value in self.stores.items()},
             "current_speaker": self.current_speaker,
             "available_moves": self.available_moves,
-            "dialogue_history": self.dialogue_history
+            "dialogue_history": self.dialogue_history,
+            "extURI": self.extURI
         }
 
         return to_return #json.dumps(to_return)

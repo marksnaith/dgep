@@ -1,3 +1,4 @@
+import external
 ''' Module for effect handlers
 
     Allows for easy development of new handlers if/when new effects are added
@@ -139,6 +140,12 @@ def handle_move_effect(dialogue, effect, data=None):
         moves.append({"reply": content, "opener": opener, "moveID": moveID})
 
     if effect.action == "add":
+        if dialogue.content_source is not None:
+            tmp = external.call_uri(dialogue.content_source, {"moves": moves, "dialogueData": dialogue.json()})
+
+            if tmp.get("moves", []):
+                moves = tmp.get("moves")
+
         for name,player in dialogue.players.items():
             if player.player == user or user in player.roles:
                 dialogue.available_moves[name][time].extend(moves)

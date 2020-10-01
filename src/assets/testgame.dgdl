@@ -10,8 +10,10 @@ game(id:TestGame){
     turntaking(strict)
     backtracking(on)
 
+    extURI(id:MyTestURI, uri:"http://cicero.arg.tech/~mark/dgep/test.php")
+
     rule(id:TestRule, scope:initial){
-        if(inrole(Test2, TestRole)){
+        if(uriTest(MyTestURI)){
           assign(Test2, speaker);
           move(add, next, TestMove, $Test, {p}, Test2);
           store(add, {"test"}, TestStore);
@@ -19,10 +21,10 @@ game(id:TestGame){
     }
 
     interaction(id:TestMove, addressee:TestUser, content:{p}, opener:"Test, $p"){
-      save({p}, $TestVar$);
-      if(!inspect(in, {"xyz"}, TestStore) && !event(last, TestMove, {$TestVar$})){
-        assign(Target, speaker);
-        move(add, next, TestMove, $Test2, {$TestVar$}, Target);
-      }
+
+        if(uriTest(MyTestURI)){
+          assign(Target, speaker);
+          move(add, next, TestMove, $Test2, {$TestVar$}, Target);
+        }
     }
 }
