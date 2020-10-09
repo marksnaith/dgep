@@ -33,6 +33,8 @@ class Dialogue:
             self.runtimevars = {}
             self.dialogue_history = []
             self.status = "inactive"
+            self.extURI = {}
+            self.content_source = None
 
 
     def new_dialogue(self, dgdl, **data):
@@ -57,6 +59,8 @@ class Dialogue:
             self.turntaking = self.game.turntaking
             self.backtracking = self.game.backtracking
 
+            self.extURI = self.game.extURI
+
             if "participants" in data:
                 participantID = 1
                 for participant in data["participants"]:
@@ -71,6 +75,8 @@ class Dialogue:
             for store in self.game.stores:
                 id = store.storeID
                 self.stores[id] = Store(id, store.owner, store.structure, store.visibility, store.content)
+
+            self.content_source = data.get("contentSource", None)
 
             self.start()
             return self.save()
@@ -153,6 +159,9 @@ class Dialogue:
 
         interaction = None
 
+        if "moveID" not in data:
+            data["moveID"] = interactionID
+
         for i in self.game.interactions:
             if i.id == interactionID:
                 interaction = i
@@ -224,7 +233,8 @@ class Dialogue:
             "dialogue_history": self.dialogue_history,
             "current_speakers": self.current_speakers,
             "runtimevars": self.runtimevars,
-            "status": self.status
+            "status": self.status,
+            "extUri": self.extUri
         }
 
         return to_return
