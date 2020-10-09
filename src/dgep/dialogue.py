@@ -178,7 +178,6 @@ class Dialogue:
                 handle_effects(self, effects, data)
 
             self.dialogue_history.append(data)
-            # self.save()
             return self.get_available_moves()
         else:
             return "Interaction not found"
