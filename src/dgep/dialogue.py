@@ -232,7 +232,7 @@ class Dialogue:
             "current_speakers": self.current_speakers,
             "runtimevars": self.runtimevars,
             "status": self.status,
-            "extUri": self.extURI,
+            "extURI": self.extURI,
             "content_source": self.content_source
         }
 
