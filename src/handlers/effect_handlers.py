@@ -187,7 +187,6 @@ def handle_store_effect(dialogue, effect, data=None):
 def handle_status_update(dialogue, effect, data=None):
     if effect.type != "statusupdate":
         return
-    dialogue.status = effect.status
     #dialogue.set_status(effect.status)
 
 @effect_handler("save")

@@ -1,8 +1,8 @@
 import dgdl
 import ast
-from .components import *
+from components import *
 import json
-from .handlers import *
+from handlers import *
 import uuid
 import sys
 import pymongo
@@ -13,45 +13,54 @@ class Dialogue:
     Class to represent and manage a dialogue based on a DGDL protocol
     """
 
-    def __init__(self, dialogue=None):
+    def __init__(self):
+        #DGDL
         self.parser = dgdl.DGDLParser()
+        self.game = None
 
-        if dialogue is not None:
-            self.load(dialogue)
-        else:
-            self.dgdl = None
-            self.game = None
+        #meta-level stuff
+        self.owner = None
+        self.mongo = pymongo.MongoClient("mongodb://dgep_mongo:27017/")
 
-            # dialogue properties
-            self.players = {}
-            self.stores = {}
-            self.turntaking = "strict"
-            self.backtracking = False
-            self.available_moves = {}
-            self.current_speaker = None
-            self.current_speakers = []
-            self.runtimevars = {}
-            self.dialogue_history = []
-            self.status = "inactive"
-            self.extURI = {}
-            self.content_source = None
+        #Dialogue properties
+        self.dialogueID = None
+        self.protocol = None
+        self.players = {}
+        self.stores = {}
+        self.turntaking = "strict"
+        self.backtracking = False
+        self.available_moves = {}
+        self.current_speaker = None
+        self.current_speakers = []
+        self.runtimevars = {}
+        self.dialogue_history = []
+        self.extURI = {}
+        self.content_source = None
 
-
-    def new_dialogue(self, dgdl, **data):
+    def new_dialogue(self, protocol, data, owner):
         """
-        Creates a new dialogue based on the given game
+        Creates a new dialogue based on the given protocol
         :param str protocol: the protocol corresponding to a DGDL file
         :param dict data: the data to instantiate the protocol into a dialogue
+        :owner the username of the owner of this dialogue
 
         :return dictionary representation of the dialogue
         :rtype dict
         """
 
+        if owner is None:
+            return None
+
         if data is None:
             data = {}
 
+        self.owner = owner
+        self.dialogueID = str(uuid.uuid4().hex)
+
+        self.protocol = protocol.lower()
+        dgdl = self.load_protocol(self.protocol)
+
         if dgdl is not None:
-            self.dgdl = dgdl
             self.game = self.parser.parse(input=dgdl)
             if isinstance(self.game, list):
                 return {"errors": self.game}
@@ -62,14 +71,12 @@ class Dialogue:
             self.extURI = self.game.extURI
 
             if "participants" in data:
-                participantID = 1
                 for participant in data["participants"]:
                     name = participant["name"]
                     player = participant["player"]
                     roles = [r for p in self.game.players for r in p.roles if p.playerID==player]
 
-                    self.players[name] = Player(name, player, roles, participantID)
-                    participantID = participantID + 1
+                    self.players[name] = Player(name, player, roles)
                     self.available_moves[name] = {"next":[], "future":[]}
 
             for store in self.game.stores:
@@ -79,9 +86,11 @@ class Dialogue:
             self.content_source = data.get("contentSource", None)
 
             self.start()
-            return self.save()
+            self.save()
+
+            return self.json()
         else:
-            return {"error":"No game specification provided"}
+            return {"error":"Protocol " + self.protocol + " not found"}
 
     def start(self):
         """
@@ -90,12 +99,12 @@ class Dialogue:
 
         for rule in self.game.rules:
             if rule.scope == "initial":
+                print("Handling initial effects")
+                print(rule.effects)
                 handle_effects(self, rule.effects)
                 if rule.conditional is not None:
                     effects = handle_conditional(self, rule.conditional)
                     handle_effects(self, effects)
-
-        self.status = "active"
 
     def validate(self):
         ''' Checks that this dialogue satisfies the constraints of the
@@ -133,7 +142,7 @@ class Dialogue:
 
         return response
 
-    def perform_interaction(self, interactionID, **data):
+    def perform_interaction(self, interactionID, data):
         """
         Performs the given interaction, based on the given data
 
@@ -146,8 +155,10 @@ class Dialogue:
         '''data is expected in the following format:
 
            data = {
-           "speaker": <User>,
+            "moveID": <moveID>,
             "target": <User>,
+            "dialogueID": <dialogueID>,
+            "speaker": <User>,
             "reply": {
                 "p": "content",
                 "q": "content",
@@ -170,6 +181,8 @@ class Dialogue:
             self.available_moves[k]["next"] = []
 
         if interaction is not None:
+            print("Performing interaction effects")
+            print(interaction.effects)
             if interaction.effects:
                 handle_effects(self, interaction.effects, data)
 
@@ -178,12 +191,50 @@ class Dialogue:
                 handle_effects(self, effects, data)
 
             self.dialogue_history.append(data)
-            # self.save()
+            self.save()
             return self.get_available_moves()
         else:
             return "Interaction not found"
 
-    def load(self, dialogue):
+    def save(self):
+        """
+        Save the dialogue state to MongodB
+        """
+        db = self.mongo["dgep"]
+        dialogues = db["dialogues"]
+
+        query = {"dialogueID": self.dialogueID}
+
+        if dialogues.find(query).count() > 0:
+            d = {"$set" : {"dialogue": self.json()}}
+            dialogues.update_one(query, d)
+        else:
+            store = {
+                "dialogueID": self.dialogueID,
+                "owner": self.owner,
+                "dialogue": self.json()
+            }
+            dialogues.insert_one(store).inserted_id
+
+    def load_protocol(self, protocol):
+        """
+        Load the given protocol dgdl from mongo
+        :param str protocol: the name of the protocol to load
+        :return the dgdl
+        :rtype str
+        """
+        db = self.mongo["dgep"]
+        protocols = db["protocols"]
+
+        result = protocols.find_one({"name":self.protocol})
+
+        if result is not None:
+            return result["dgdl"].decode("utf-8")
+        else:
+            return None
+
+
+    def load(self, dialogueID):
         """
         Load the dialogue with the given ID from mongoDB
         :param str dialogueID: the dialogueID to load
@@ -191,37 +242,60 @@ class Dialogue:
         :rtype Dialogue
         """
 
-        self.dgdl = dialogue["dgdl"]
+        db = self.mongo["dgep"]
+        dialogues = db["dialogues"]
 
-        # self.dialogueID = dialogue["dialogueID"]
-        self.game = self.parser.parse(input=self.dgdl)
-        self.available_moves = dialogue["available_moves"]
-        self.current_speaker = dialogue["current_speaker"]
-        self.backtracking = dialogue["backtracking"]
-        self.turntaking = dialogue["turntaking"]
-        self.dialogue_history = dialogue["dialogue_history"]
-        self.current_speakers = dialogue["current_speakers"]
-        self.runtimevars = dialogue["runtimevars"]
-        self.status = dialogue["status"]
-        self.extURI = dialogue["extURI"]
-        self.content_source = dialogue["content_source"]
+        result = dialogues.find_one({"dialogue.dialogueID": dialogueID})
 
-        self.players = {}
-        self.stores = {}
+        if result is not None:
+            self.owner = result["owner"]
+            dialogue = result["dialogue"]
 
-        for name, player in dialogue["players"].items():
+            self.dialogueID = dialogue["dialogueID"]
+            self.protocol = dialogue["protocol"]
+            self.game = self.parser.parse(input=self.load_protocol(self.protocol))
+            self.available_moves = dialogue["available_moves"]
+            self.current_speaker = dialogue["current_speaker"]
+            self.backtracking = dialogue["backtracking"]
+            self.extURI = dialogue["extURI"]
+
+            for name, player in dialogue["players"].items():
+                self.players[name] = Player(player["name"], player["player"], player["roles"])
+
+            for name, store in dialogue["stores"].items():
+                self.stores[name] = Store(store["id"], store["owner"], store["structure"],store["visibility"], store["content"])
+
+            return self
+        else:
+            return None
+
+
+        mock_json = '{"dialogueID":"abc","protocol":"testgame","backtracking": true, "available_moves": {"Bob": {"next": [{"reply": {"p": "$p"}, "moveID": "TestMove", "opener": ""}], "future": []}}, "current_speaker": "Bob", "players": {"Bob": {"roles": ["TestRole", "speaker"], "name": "Bob", "player": "Test2"}}, "stores": {"TestStore": {"visibility": "public", "content": ["c"], "id": "TestStore", "owner": ["Test"], "structure": "set"}}}'
+
+        d = json.loads(mock_json)
+
+        self.dialogueID = d["dialogueID"]
+        self.protocol = d["protocol"]
+
+        self.game = self.parser.parse("/app/assets/{protocol}.dgdl".format(protocol=self.protocol))
+        self.available_moves = d["available_moves"]
+        self.current_speaker = d["current_speaker"]
+        self.backtracking = d["backtracking"]
+
+        for name, player in d["players"].items():
             self.players[name] = Player(player["name"], player["player"], player["roles"])
 
-        for name, store in dialogue["stores"].items():
+        for name, store in d["stores"].items():
             self.stores[name] = Store(store["id"], store["owner"], store["structure"],store["visibility"], store["content"])
 
-        return self
+        return self.json()
 
-    def save(self):
-        ''' Get a dict representation of this dialogue '''
+    def json(self):
+        ''' Get a JSON representation of this dialogue '''
 
         to_return = {
-            "dgdl": self.dgdl,
+            "dialogueID": self.dialogueID,
+            "protocol": self.protocol,
             "players": {key: value.__dict__ for key,value in self.players.items()},
             "turntaking": self.turntaking,
             "backtracking": self.backtracking,
@@ -229,11 +303,7 @@ class Dialogue:
             "current_speaker": self.current_speaker,
             "available_moves": self.available_moves,
             "dialogue_history": self.dialogue_history,
-            "current_speakers": self.current_speakers,
-            "runtimevars": self.runtimevars,
-            "status": self.status,
-            "extUri": self.extURI,
-            "content_source": self.content_source
+            "extURI": self.extURI
         }
 
-        return to_return
+        return to_return #json.dumps(to_return)

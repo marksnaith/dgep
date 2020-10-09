@@ -11,7 +11,6 @@ def call_uri(uri, data=None):
 
     try:
         result = requests.post(uri, data=data)
-        print(result.text)
         response = result.json()
     except:
         response = {"response": False}

@@ -28,7 +28,7 @@ game(id:TestGame){
 
         if(uriTest(MyTestURI)){
           assign(Target, speaker);
-          move(add, next, TestMove, $Test2, {$TestVar$}, Target);
+          move(add, next, TestMove, $Test2, {p}, Target);
         }
     }
 }

@@ -63,6 +63,7 @@ def handle_event_requirement(dialogue, requirement, data):
             elif c[0] == "$":
                 tmp.append(",".join(dialogue.runtimevars[c[1:-1]]))
         content = tmp
+        print("CONTENT: " + str(content))
 
         move_content = data["reply"].values()
         if content == move_content:
@@ -147,7 +148,9 @@ def handle_uri_test_requirement(dialogue, requirement, data):
     if data is None:
         data = {}
 
-    data = {"interactionData": data, "dialogueData": dialogue.save()}
+    data = {"interactionData": data, "dialogueData": dialogue.json()}
+
+    print("Sending data: {}".format(str(data)))
 
     if id in dialogue.extURI:
         response = external.call_uri(dialogue.extURI[id], data)
