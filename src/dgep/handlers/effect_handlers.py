@@ -1,4 +1,4 @@
-import external
+from dgep import external
 ''' Module for effect handlers
 
     Allows for easy development of new handlers if/when new effects are added

@@ -1,4 +1,4 @@
-import external
+from dgep import external
 
 ''' Module for handling conditionals
 
