@@ -13,8 +13,7 @@ setuptools.setup(
      url="http://arg.tech",
      packages=setuptools.find_packages(),
      install_requires = [
-     'dgdl @ git+https://github.com/arg-tech/dgdl-parser.git#egg=dgdl&subdirectory=src',
-     'pymongo'
+     'dgdl @ git+https://github.com/arg-tech/dgdl-parser.git#egg=dgdl&subdirectory=src'
      ],
      dependency_links=[
 
