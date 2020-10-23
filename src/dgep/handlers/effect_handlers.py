@@ -1,24 +1,65 @@
+"""
+Copyright (C) 2020  Centre for Argument Technology (http://arg.tech)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from dgep import external
-''' Module for effect handlers
+"""
+Module for effect handlers
 
-    Allows for easy development of new handlers if/when new effects are added
-    to the DGDL spec
+Allows for easy development of new handlers if/when new effects are added
+to the DGDL spec
 
-    All new effect handlers have the same basic signature:
+All new effect handlers have the same basic signature:
 
-    @effect_handler(<effect>)
-    def handle_<effect>_effect(dialogue, effect, data)
-'''
+@effect_handler(<effect>)
+def handle_<effect>_effect(dialogue, effect, data)
+"""
 
 effect_handlers = {}
 
 def effect_handler(effect):
+    """
+    Decorator to assign function as handlers for the given effect
+    """
     def wrapper(fn):
-        effect_handlers[effect] = fn
-        return fn
+        """
+        Internal wrapper for the decorator; replaces the given function
+        with an overriden version that checks the effect type matches the
+        type given to the decorator
+        """
+        def inner(dialogue, _effect, data):
+            """
+            Override for provided function to check effect type
+            """
+            if _effect.type != effect:
+                return
+            else:
+                return fn(dialogue, _effect, data)
+
+        effect_handlers[effect] = inner
+        return inner
+
     return wrapper
 
 def handle_effects(dialogue, effects, data=None):
+    """
+    Handles the given set of effects in the given dialogue, using the given
+    data (if provided)
+    """
+
     for effect in effects:
         if effect.type in effect_handlers:
             effect_handlers[effect.type](dialogue, effect, data)
@@ -27,10 +68,9 @@ def handle_effects(dialogue, effects, data=None):
 
 @effect_handler("assign")
 def handle_assign_effect(dialogue, effect, data):
-    ''' Handles assign effects '''
-
-    if effect.type != "assign":
-        return
+    """
+    Handle assign effects
+    """
 
     user = effect.user
     role = effect.role
@@ -57,8 +97,9 @@ def handle_assign_effect(dialogue, effect, data):
 
 @effect_handler("move")
 def handle_move_effect(dialogue, effect, data=None):
-    if effect.type != "move":
-        return
+    """
+    Handle move effects: adds or deletes moves in the dialogue
+    """
 
     moveID = effect.moveID
     time = effect.time
@@ -114,7 +155,6 @@ def handle_move_effect(dialogue, effect, data=None):
                 addressees.append(name)
 
     moves = []
-
     opener = None;
 
     for i in dialogue.game.interactions:
@@ -147,8 +187,9 @@ def handle_move_effect(dialogue, effect, data=None):
 
 @effect_handler("storeop")
 def handle_store_effect(dialogue, effect, data=None):
-    if effect.type != "storeop":
-        return
+    """
+    Handle store operation effects
+    """
 
     storeID = effect.storeID
     action = effect.storeaction
@@ -185,16 +226,16 @@ def handle_store_effect(dialogue, effect, data=None):
 
 @effect_handler("statusupdate")
 def handle_status_update(dialogue, effect, data=None):
-    if effect.type != "statusupdate":
-        return
+    """
+    Handle status update effects
+    """
     dialogue.status = effect.status
-    #dialogue.set_status(effect.status)
 
 @effect_handler("save")
 def handle_save_effect(dialogue, effect, data=None):
-    if effect.type != "save":
-        return
-
+    """
+    Handle save effects, saving content to runtime variables
+    """
     content = effect.content
     variable = effect.variable
 
