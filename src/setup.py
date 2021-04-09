@@ -30,7 +30,7 @@ setuptools.setup(
      url="http://arg.tech",
      packages=setuptools.find_packages(),
      install_requires = [
-     'dgdl @ git+https://github.com/arg-tech/dgdl-parser.git#egg=dgdl&subdirectory=src',
+     'dgdl @ git+https://github.com/marksnaith/dgdl-parser.git#egg=dgdl&subdirectory=src',
      'requests'
      ],
      dependency_links=[
